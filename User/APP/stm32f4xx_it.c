@@ -170,10 +170,93 @@ void USART2_IRQHandler(void)
 	serial_isr(1);
 	OSIntExit();    
 }
+
+#define RECV_STA_WAIT1ST	0x01
+#define RECV_STA_WAIT2ND	0x02
+#define RECV_STA_DATAH		0x03
+#define RECV_STA_DATAL		0x04
+
+
+#define EXTCMD_HEAD		0xaa
+#define EXTCMD_SET_ENC1	0xe0
+#define EXTCMD_SET_ENC2	0xe1
+#define EXTCMD_SET_ENC3	0xe2
+#define EXTCMD_SET_ENC4	0xe3
+
+static uint8_t recv_sta = RECV_STA_WAIT1ST;
+
 void USART3_IRQHandler(void)
 {
+	uint16_t ushTemp;
+	static uint8_t enc;
+	static uint16_t dat;
 	OSIntEnter();
-	serial_isr(2);
+	
+	if(USART_GetFlagStatus(USART3, USART_FLAG_ORE) != RESET)
+	{//同  @arg USART_IT_ORE_ER : OverRun Error interrupt if the EIE bit is set  
+	ushTemp = USART_ReceiveData(USART3); //取出来扔掉
+	USART_ClearFlag(USART3, USART_FLAG_ORE);
+	}
+	
+	if(USART_GetFlagStatus(USART3, USART_FLAG_NE) != RESET)
+	{//同  @arg USART_IT_NE 	: Noise Error interrupt
+	USART_ClearFlag(USART3, USART_FLAG_NE);
+	}
+	
+	
+	if(USART_GetFlagStatus(USART3, USART_FLAG_FE) != RESET)
+	{//同	@arg USART_IT_FE	 : Framing Error interrupt
+	USART_ClearFlag(USART3, USART_FLAG_FE);
+	}
+	
+	if(USART_GetFlagStatus(USART3, USART_FLAG_PE) != RESET)
+	{//同  @arg USART_IT_PE 	: Parity Error interrupt
+	USART_ClearFlag(USART3, USART_FLAG_PE);
+	}
+	
+	if(USART_GetFlagStatus(USART3, USART_FLAG_RXNE) != RESET)
+	{
+		ushTemp = USART_ReceiveData(USART3); 
+		USART_ClearFlag(USART3, USART_FLAG_RXNE);
+		switch(recv_sta){
+			case RECV_STA_WAIT1ST:
+				if(ushTemp == EXTCMD_HEAD) recv_sta = RECV_STA_WAIT2ND;
+			break;
+			case RECV_STA_WAIT2ND:
+				if((ushTemp&0xfc) == 0xe0){
+					 recv_sta = RECV_STA_DATAL;
+					 dat = 0;
+					 enc = ushTemp;
+				}
+			break;
+			case RECV_STA_DATAL:
+				dat = ushTemp;
+				recv_sta = RECV_STA_DATAH;
+			break;
+			case RECV_STA_DATAH:
+				dat = (ushTemp<<8) | dat;
+				recv_sta = RECV_STA_WAIT1ST;
+				switch (enc){
+					case EXTCMD_SET_ENC1:
+						SetEncoder(dat,0);
+					break;
+					case EXTCMD_SET_ENC2:
+						SetEncoder(dat,1);
+					break;
+					case EXTCMD_SET_ENC3:
+						SetEncoder(dat,2);
+					break;
+					case EXTCMD_SET_ENC4:
+						SetEncoder(dat,3);
+					break;
+				}
+			break;
+				
+			default:
+				recv_sta = RECV_STA_WAIT1ST;
+			
+		}
+	}
 	OSIntExit();    
 }
 void UART4_IRQHandler(void)
@@ -222,6 +305,16 @@ void EXTI3_IRQHandler(void)
 	}
 }
 
+
+void DMA1_Stream3_IRQHandler(void)  
+{  
+    if(DMA_GetITStatus(DMA1_Stream3,DMA_IT_TCIF3) != RESET)   
+    {  
+        //清除标志位  
+        DMA_ClearFlag(DMA1_Stream3,DMA_FLAG_TCIF3);  
+    }  
+}  
+     
 
 /******************************************************************************/
 /*                 STM32F4xx Peripherals Interrupt Handlers                   */

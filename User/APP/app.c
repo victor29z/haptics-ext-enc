@@ -122,13 +122,22 @@ int main(void)
 #if (OS_TASK_NAME_EN > 0)
     CPU_INT08U  err;
 #endif
-    CPU_Init();                                                 /* Initialize the uC/CPU services                       */
-    Mem_Init();                                                 /* Initialize Memory Mmanagment Module                  */
-    //Math_Init();                                                /* Initialize Mathematical Module                       */
+    //CPU_Init();                                                 /* Initialize the uC/CPU services                       */
+    //Mem_Init();                                                 /* Initialize Memory Mmanagment Module                  */
 
-    //BSP_IntDisAll();                                            /* Disable all Interrupts.                              */
+	BSP_Init();                                                 /* Initialize BSP functions                             */
+	//systick_init();
+	SetEncoder(0x1122,0);
+	SetEncoder(0x3344,1);
+	SetEncoder(0x5566,2);
+	SetEncoder(0x7788,3);
 
-    OSInit();                                                   /* Init uC/OS-II.                                       */
+
+	while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
+		GetEncoderKey();
+        
+    }
+	OSInit();                                                   /* Init uC/OS-II.                                       */
 
     OSTaskCreateExt((void (*)(void *)) AppTaskStart,            /* Create the start task                                */
                     (void           *) 0,
@@ -171,12 +180,11 @@ static  void  AppTaskStart (void *p_arg)
    (void)p_arg;
 	uint8_t i;
 	uint8_t err;
-	Sem_KEY1_EVT = OSSemCreate(0);
-	Sem_KEY2_EVT = OSSemCreate(0);
-    BSP_Init();                                                 /* Initialize BSP functions                             */
-	//BSP_LED_Init();                                             /* Init LEDs.                                           */
-	systick_init();                                            /* Start Tick Initialization                            */
-    OSTaskCreateExt(UartMonitor_task,
+	//Sem_KEY1_EVT = OSSemCreate(0);
+	//Sem_KEY2_EVT = OSSemCreate(0);
+                                                /* Start Tick Initialization                            */
+/*
+	OSTaskCreateExt(UartMonitor_task,
 						(void *)0,								  
 						&UMon_task_stk[LARGE_TASK_STK_SIZE - 1], 
 						UMON_TASK_PRIO, 					
@@ -185,6 +193,7 @@ static  void  AppTaskStart (void *p_arg)
 						LARGE_TASK_STK_SIZE,
 						(void *)0,		
 						OS_TASK_OPT_NONE);
+
 	OSTaskCreateExt(MotorControl_Task,
 						(void *)0,								  
 						&Motor_task_stk[LARGE_TASK_STK_SIZE - 1], 
@@ -194,7 +203,7 @@ static  void  AppTaskStart (void *p_arg)
 						LARGE_TASK_STK_SIZE,
 						(void *)0,		
 						OS_TASK_OPT_NONE);
-	
+*/	
 /*
 	OSTaskCreateExt(ConsoleService_task,
 						(void *)0,								
@@ -206,9 +215,13 @@ static  void  AppTaskStart (void *p_arg)
 						(void *)0,								
 						OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
 	*/
-
-	while(mInitCH378Device() != ERR_SUCCESS)
+/*
+	while(mInitCH378Device() != ERR_SUCCESS){
+		
 		OSTimeDly(20);
+		
+	}
+		
 	i = 0;
 	while(!(~(GetKeys()) & KEY1_MASK)){
 		if(i < 30) i++;
@@ -223,24 +236,16 @@ static  void  AppTaskStart (void *p_arg)
 	ForceEnable = 1;
 	BSP_LED_On(0);
 	BSP_LED_On(1);
+*/
+	SetEncoder(0x1122,0);
+	SetEncoder(0x3344,1);
+	SetEncoder(0x5566,2);
+	SetEncoder(0x7788,3);
+
+
 	while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
-		
-		OSSemPend(Sem_KEY2_EVT,0,&err);       
-		//if((~(GetKeys()) & KEY1_MASK))
-		//	CalEncoder();
-		//if((~(GetKeys()) & KEY2_MASK))	{
-			if(ForceEnable == 0){
-				ForceEnable = 1;
-				ENABLE_MOTOR();
-				BSP_LED_On(1);
-			}
-			else{
-				ForceEnable = 0;
-				DISABLE_MOTOR();
-				BSP_LED_Off(1);
-			}
-		//}
-		
+		GetEncoderKey();
+		OSTimeDly(1);
 		
               
     }
@@ -283,16 +288,22 @@ static  void  MotorControl_Task (void *p_arg)
 		}
 		SET_MOTOR1_PWM(ChannelPulse[0]);
 		SET_M_DIR(1,MotorDir[0]);
+		SET_M_DIS_HIGH(1);
 		SET_MOTOR2_PWM(ChannelPulse[1]);
 		SET_M_DIR(2,MotorDir[1]);
+		SET_M_DIS_HIGH(2);
 		SET_MOTOR3_PWM(ChannelPulse[2]);
 		SET_M_DIR(3,MotorDir[2]);
+		SET_M_DIS_HIGH(3);
 		SET_MOTOR4_PWM(ChannelPulse[3]);
 		SET_M_DIR(4,MotorDir[3]);
+		SET_M_DIS_HIGH(4);
 		SET_MOTOR5_PWM(ChannelPulse[4]);
 		SET_M_DIR(5,MotorDir[4]);
+		SET_M_DIS_HIGH(5);
 		SET_MOTOR6_PWM(ChannelPulse[5]);
 		SET_M_DIR(6,MotorDir[5]);
+		SET_M_DIS_HIGH(6);
 		//ChannelPulse = (uint16_t) (((uint32_t) 100 * (PWMPeriod- 1)) / 1000);
 		
               

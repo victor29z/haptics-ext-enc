@@ -185,7 +185,7 @@ void	mCH378Interrupt( void )
 		In_Packet[0] = DEV_POS_STA;
 		for (i=0;i<6;i++)
 		{
-			u32Temp = GetEncoder(i);
+			//u32Temp = GetEncoder(i);
 			In_Packet[2*i+1] = 0xff & u32Temp;
 			In_Packet[2*i+2] = 0xff &(u32Temp>>8);					
 		}		
